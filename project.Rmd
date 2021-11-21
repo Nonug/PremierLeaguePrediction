@@ -1,0 +1,217 @@
+---
+title: "group"
+author: "groupx"
+date: "11/13/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+dataset: Cryptocurrency Forecasting in R (https://www.kaggle.com/c/g-research-crypto-forecasting/overview)
+
+codebook: https://www.kaggle.com/c/g-research-crypto-forecasting/data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/spoon/OneDrive - NVIDIA Corporation/Documents/3612/group")
+```
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(timeSeries)
+library(tseries)
+library(xts)
+library(zoo)
+library(quantmod)
+library(PerformanceAnalytics)
+library(forecast)
+library(rugarch)
+library(caret)
+library(lightgbm)
+library(xgboost)
+library(Matrix)
+```
+
+## Load csvs
+
+```{r, echo=FALSE, message=FALSE}
+train <- readr::read_csv("dataset/train.csv")
+asset <- readr::read_csv("dataset/asset_details.csv")
+example_sample_submission <- readr::read_csv("dataset/example_sample_submission.csv")
+example_test <- readr::read_csv("dataset/example_test.csv")
+supplemental_train <- readr::read_csv("dataset/supplemental_train.csv")
+```
+
+## Binance coin -> Dogecoin
+
+```{r}
+train.df <- data.frame(train)
+train.df$Asset_ID[train.df$AssetID == "0"] <- "14"
+```
+
+## Remove rows w/ NAs
+
+```{r}
+print(paste("number of rows before removing NAs: ", nrow(train.df)))
+train.df <- na.omit(train.df)
+print(paste("number of rows after removing NAs: ", nrow(train.df)))
+```
+
+## EDA
+
+### Use some other packages to do data engineering
+### quantmod
+
+### use the models we learnt in class
+
+```{r}
+head(train.df)
+```
+
+```{r}
+asset.df <- data.frame(asset)
+head(asset.df)
+```
+```{r}
+example_sample_submission.df <- data.frame(example_sample_submission)
+head(example_sample_submission.df)
+```
+```{r}
+example_test.df <- data.frame(example_test)
+head(example_test.df)
+```
+
+```{r}
+supplemental_train.df <- data.frame(supplemental_train)
+head(supplemental_train.df)
+```
+
+## Crypto Analysis
+
+```{r}
+# Convert date
+Date <- as.Date(as.POSIXct(train.df$timestamp, origin="1970-01-01 00:00:00.000"))
+train.df <- data.frame(Date, train.df)
+```
+
+```{r}
+crypto_analysis <- function(id, fc)
+{
+  target <- train.df[train.df$Asset_ID == id,]
+  ts.data <- ts(target$Open, frequency=250) # time series
+  
+  kable(mean(ts.data), caption = "Mean of Bitcoin Time Series")
+  kable(sd(ts.data), caption = "Standard Deviation of Bitcoin Time Series")
+  
+  target.xts <- as.xts(ts.data, dateFormat="POSIXct")
+  chartSeries(target.xts,
+              type = "candlesticks",
+              theme = chartTheme('black'),
+              TA=c(addVo(),
+                   addSMA(n = 200, col = 'blue'),
+                   addSMA(n = 50, col = 'red'),
+                   addSMA(n = 22, col = 'green'),
+                   addBBands(), addMACD()))
+  
+  if (fc)
+  {
+    fit <- HoltWinters(ts.data)
+    plot(fit, main="Bitcoin Holt-Winters Filtering, Models Level + Trend + Seasonal Components")
+    
+    crypto.fc <- forecast(fit, 20)
+    plot(crpyto.fc, main="Bitcoin Price Forecast (20 Days) from Holt-Winters Filtering")
+  }
+}
+crypto_analysis(1, TRUE)
+```
+
+```{r}
+# Fit Seasonal Decomposition
+fit <- HoltWinters(bitcoin_time_series)
+plot(fit, main="Bitcoin Holt-Winters Filtering, Models Level + Trend + Seasonal Components")
+
+# Predict Next Twenty Future Values
+Bitcoin_Forecast <- forecast(fit, 20)
+plot(Bitcoin_Forecast, main="Bitcoin Price Forecast (20 Days) from Holt-Winters Filtering")
+```
+
+## Create training features
+
+```{r}
+train.df$Upper_Shadow <- train.df$High / max(train.df$Close, train.df$Open)
+train.df$Lower_Shadow <- min(train.df$Close, train.df$Open) / train.df$Low
+train.df$open2close <- train.df$Close / train.df$Open
+train.df$high2low <- train.df$High / train.df$Low
+data_subset <- data.frame(Open=train.df$Open, High=train.df$High, Low=train.df$Low, Close=train.df$Close)
+mean_price <- apply(data_subset, 1, mean)
+median_price <- apply(data_subset, 1, median)
+train.df$high2mean <- train.df$High / mean_price
+train.df$low2mean <- train.df$Low / mean_price
+train.df$high2median <- train.df$High / median_price
+train.df$low2median <- train.df$Low / median_price
+train.df$volume2count  <- train.df$Volume / train.df$Count
+
+head(train.df)
+```
+
+```{r}
+head(train.df)
+```
+
+
+## Convert variables to factors
+
+```{r}
+train.df$Upper_Shadow <- factor(train.df$Upper_Shadow)
+train.df$Lower_Shadow <- factor(train.df$Lower_Shadow)
+train.df$open2close <- factor(train.df$open2close)
+train.df$high2low <- factor(train.df$high2low)
+train.df$high2mean <- factor(train.df$high2mean)
+train.df$low2mean <- factor(train.df$low2mean)
+train.df$high2median <- factor(train.df$high2median)
+train.df$low2median <- factor(train.df$low2median)
+train.df$volume2count <- factor(train.df$volume2count)
+```
+
+## XGBoost
+
+```{r}
+# Format Training Data for XGB Model
+trainm <- sparse.model.matrix(Target ~ Upper_Shadow + Lower_Shadow + open2close +
+                             high2mean + low2mean + high2median + low2median +
+                             volume2count, data = train.df)
+train_label <- train.df[,"Target"]
+train_matrix <- xgb.DMatrix(data = as.matrix(trainm), label = train_label)
+
+# Create Validation Data
+valm <- sparse.model.matrix(Target ~., data = test)
+val_label <- test[,"Target"]
+val_matrix <- xgb.DMatrix(data = as.matrix(valm), label = val_label)
+
+#Specify Parameters
+xgb_params <- list(eval_metric = "error",
+                   max_depth = 3,
+                   eta= 0.01,
+                   gammma = 1,
+                   colsample_bytree = 0.5,
+                   min_child_weight = 1)
+
+# Create XGB Model
+Model_XGB <- xgb.train(params = xgb_params, data = train_matrix, nrounds = 1000)
+
+pred_XGB <- predict(Model_XGB, newdata = val_matrix)
+
+results_XGB <- data.frame(R2=R2(pred_XGB, example_test$Target),
+                          RMSE=RMSE(pred_XGB, example_test$Target),
+                          MAE=MAE(pred_XGB, example_test$Target))
+
+results_XGB
+```
+
