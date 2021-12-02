@@ -1,5 +1,19 @@
-# STAT3612 Project Title - Crypto Market Prediction
+# STAT3612 Project - Predicting Premium League Winning Team
 
-## Kaggle Competition - G-Research Crypto Forecasting
+## Overview
 
-Competition has been launched for 7 days since 2nd November 2021
+We're going to predict whether or not the home team will win given a set of other statistics. The dataset for this was retrieved from [this](http://football-data.co.uk/data.php) site.
+
+[EDA.rmd](./EDA.Rmd): EDA walkthrough
+
+## Todos
+- [x] Gather data
+- [ ] EDA
+- [ ] Data pre-processing
+- [ ] Feature engineering
+- [ ] Training models.
+- [ ] Choosing the best model.
+- [ ] Evaluating the model.
+- [ ] Tuning Hyperparameters on the model.
+- [ ] Interpreting the model results.
+

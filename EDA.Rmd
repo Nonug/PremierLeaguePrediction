@@ -1,0 +1,54 @@
+---
+title: "StatisticalML3612"
+author: "VladG"
+date: "12/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(ggbiplot)
+library(dplyr)
+
+# Data relocated
+df <- read.csv(".data/data.csv")
+```
+
+```{r}
+# omit the X variable (game number)
+# df <- df[,-1]
+# drop all data points with NA for Bet365, Bet&Win and Interwetten
+df <- df %>% drop_na(B365H)
+df <- df %>% drop_na(BWH)
+df <- df %>% drop_na(IWH)
+# drop all other odds
+df <- df[, -c(109:182)]
+df <- df[, -c(35:107)]
+
+df$season <- as.factor(df$season)
+
+# turn into factor, pad with 0s, data visualization
+```
+
+```{r}
+ggplot(data = df, aes(x = B365H, y = FTHG)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+```{r}
+# PCA
+
+pca <- prcomp(df[, c(26:27)], center = TRUE, scale. = TRUE)
+summary(pca)
+
+ggbiplot(pca, ellipse = TRUE, obs.scale = 1, var.scale = 1, groups = df$FTR)
+```
+
+
