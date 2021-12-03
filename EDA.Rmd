@@ -5,32 +5,167 @@ date: "12/1/2021"
 output: html_document
 ---
 
+Key to results data:
+
+Div = League Division
+Date = Match Date (dd/mm/yy)
+Time = Time of match kick off
+HomeTeam = Home Team
+AwayTeam = Away Team
+FTHG and HG = Full Time Home Team Goals
+FTAG and AG = Full Time Away Team Goals
+FTR and Res = Full Time Result (H=Home Win, D=Draw, A=Away Win)
+HTHG = Half Time Home Team Goals
+HTAG = Half Time Away Team Goals
+HTR = Half Time Result (H=Home Win, D=Draw, A=Away Win)
+
+Match Statistics (where available)
+Attendance = Crowd Attendance
+Referee = Match Referee
+HS = Home Team Shots
+AS = Away Team Shots
+HST = Home Team Shots on Target
+AST = Away Team Shots on Target
+HHW = Home Team Hit Woodwork
+AHW = Away Team Hit Woodwork
+HC = Home Team Corners
+AC = Away Team Corners
+HF = Home Team Fouls Committed
+AF = Away Team Fouls Committed
+HFKC = Home Team Free Kicks Conceded
+AFKC = Away Team Free Kicks Conceded
+HO = Home Team Offsides
+AO = Away Team Offsides
+HY = Home Team Yellow Cards
+AY = Away Team Yellow Cards
+HR = Home Team Red Cards
+AR = Away Team Red Cards
+HBP = Home Team Bookings Points (10 = yellow, 25 = red)
+ABP = Away Team Bookings Points (10 = yellow, 25 = red)
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 ```{r}
-library(tidyverse)
-library(ggplot2)
-library(ggbiplot)
-library(dplyr)
+library(pacman)
+p_load(tidyverse, ggplot2, dplyr, DataExplorer, stringr, lubridate, magrittr)
+# library(ggbiplot)
 
 # Data relocated
-df <- read.csv(".data/data.csv")
+df <- read.csv("./data/english.csv")
+print("Original data dimension")
+df_dim <- dim(df)
+```
+
+Cleaning missing data.
+```{r}
+# Check the % of missing data in each column
+
+# sapply(df, function(x) {
+#   sum(is.na(x)) / length(x)
+# })
+
+# missing_plot0 <- plot_missing(df,
+#   title = "Missing data profile by column (before)"
+# )
+# ggsave(missing_plot0,
+#   filename = "./img/Missing_before.png",
+#   height = 26, width = 8
+# )
+
+df <- df[
+  !rowSums(is.na(df)) >= ncol(df) * 0.95,
+  !colSums(is.na(df)) >= nrow(df) * 0.8 # Remove columns with >80% NA/Empty
+]
+
+print("Data dimension after getting rid of mostly empty rows and rows")
+dim(df)
+print("difference:")
+df_dim - dim(df)
+
+# missing_plot1 <- plot_missing(df,
+#   title = "Missing data profile by column (after)"
+# )
+# ggsave(missing_plot1,
+#   filename = "./img/Missing_after.png",
+#   height = 12, width = 8
+# )
+
+glimpse(df)
+```
+
+Fixing the date format and drop the first column (game number)
+```{r}
+# Index of dates using dd/mm/yy
+yy <- str_which(df$Date, "\\/\\d\\d$")
+# Make a copy of Date
+Date_tmp <- df$Date
+
+# First convert from Char to Date format
+df$Date <- as.Date(Date_tmp, tryFormat = c("%d/%m/%Y"))
+# Unify the Data column formats
+df$Date[-yy] <- as.Date(Date_tmp[-yy], tryFormat = c("%d/%m/%Y")) # 01/01/2018
+df$Date[yy] <- as.Date(Date_tmp[yy], tryFormat = c("%d/%m/%y")) # 01/01/18
+# Remove the temp df
+rm(Date_tmp)
+
+# Order date (ascending) and omit the first column (game number)
+df <- df[order(df$Date), -1]
+glimpse(df)
+```
+
+Create a DataExplorer report
+```{r}
+# create_report(df)
 ```
 
 ```{r}
-# omit the X variable (game number)
-# df <- df[,-1]
+# Number of games by year, descending.
+df %>%
+  group_by(format(df$Date, "%Y")) %>%
+  count(sort = TRUE) %>%
+  head(20)
+```
+
+Get Season
+```{r}
+get_season <- function(date) {
+  i <- year(date)
+  if (month(date) < 8) {
+    return(paste(str_sub(i - 1, -2), str_sub(i, -2), sep = ""))
+  } else {
+    return(paste(str_sub(i, -2), str_sub(i + 1, -2), sep = ""))
+  }
+}
+get_season_v <- Vectorize(get_season)
+df <- mutate(df, Season = get_season_v(Date))
+df$Season <- as.factor(df$Season)
+```
+```{r}
 # drop all data points with NA for Bet365, Bet&Win and Interwetten
+# Could data imputation be used instead?
 df <- df %>% drop_na(B365H)
 df <- df %>% drop_na(BWH)
 df <- df %>% drop_na(IWH)
-# drop all other odds
-df <- df[, -c(109:182)]
-df <- df[, -c(35:107)]
 
-df$season <- as.factor(df$season)
+cols_results <- c(
+  "Div", "Season", "Date", "Time", "HomeTeam", "AwayTeam",
+  "FTHG", "FTAG", "FTR", "HTHG", "HTAG", "HTR"
+)
+
+cols_match <- c(
+  "Referee", "HS", "AS", "HST", "AST", "HF",
+  "AF", "HC", "AC", "HY", "AY", "HR", "AR"
+)
+# Only keep odds from Bet365, Bet&Win and Interwetten
+cols_odds <- c(
+  "B365H", "B365D", "B365A", "BWH", "BWD",
+  "BWA", "IWH", "IWD", "IWA"
+)
+
+# Keep 34 selected columns
+df <- df %>% select(cols_results, cols_match, cols_odds)
+dim(df)
 
 # turn into factor, pad with 0s, data visualization
 ```
@@ -49,6 +184,13 @@ pca <- prcomp(df[, c(26:27)], center = TRUE, scale. = TRUE)
 summary(pca)
 
 ggbiplot(pca, ellipse = TRUE, obs.scale = 1, var.scale = 1, groups = df$FTR)
+```
+
+# TODO: One-hot encoding, imputation, train/test split
+
+Saving the processed dataframe
+```{r}
+write_csv(df, "./data/processed_data.csv")
 ```
 
 

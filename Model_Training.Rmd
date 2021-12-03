@@ -1,0 +1,48 @@
+---
+title: "Model Training"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(pacman)
+p_load("caret", "skimr", "RANN", "randomForest", "fastAdaboost", "gbm", "xgboost", "caretEnsemble", "C50", "earth")
+```
+
+Import dataset
+```{r}
+df <- read.csv("./data/processed_data.csv")
+
+# Structure of the dataframe
+str(df)
+
+# See top 6 rows and 10 columns
+head(df[, 1:10])
+```
+
+Train-test split
+```{r}
+# Create the training and test datasets
+set.seed(100)
+
+# Step 1: Get row numbers for the training data
+trainRowNumbers <- createDataPartition(df$FTR, p = 0.8, list = FALSE)
+
+# Step 2: Create the training dataset
+trainData <- df[trainRowNumbers, ]
+
+# Step 3: Create the test dataset
+testData <- df[-trainRowNumbers, ]
+
+# Store X and Y for later use.
+x <- trainData[, 2:18]
+y <- trainData$FTR
+```
+
+```{r}
+skimmed <- skim(trainData)
+skimmed
+```
