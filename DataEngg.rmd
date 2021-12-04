@@ -1,0 +1,117 @@
+---
+title: "StatisticalML3612"
+author: "Victor"
+date: "12/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(pacman)
+p_load(
+    tidyverse, ggplot2, dplyr, DataExplorer,
+    stringr, lubridate, magrittr, incidence
+)
+
+# Data relocated
+df <- read.csv("./data/processed_data.csv")
+```
+
+TODO: create plots with incidence 
+```{r}
+# dr <- incidence(df$Date, interval = 7,)
+# plot(dr)
+# dr_df <- as.data.frame(dr)
+# head(dr_df, 10)
+# plot(date_range)
+```
+
+Creating 
+
+HTPD and ATPD (Home/Away Team point difference) for each team
+= (cumsum(PD) - PD) / (row_number(team) - 1)
+
+where PD = Point Difference = Goals Scored - Goals Conceded,
+
+Nominator: cumulative PD of a team up to the previous week
+Denominator: # Matches played by a team 
+```{r}
+cols_results <- c(
+    "Season", "Date", "HomeTeam", "AwayTeam",
+    "FTHG", "FTAG", "FTR", "HTHG", "HTAG", "HTR"
+)
+
+df_with_week <- df[, cols_results] %>%
+    mutate(week = cut.Date(as.Date(Date), breaks = "1 week", labels = FALSE))
+
+dim(df_with_week)
+
+# Score - Conceded when away team
+a_diff <- df_with_week %>%
+    group_by(team = AwayTeam, week) %>%
+    summarize(ATPD = sum(FTAG) - sum(FTHG))
+head(a_diff, 20)
+dim(a_diff)
+
+# Score - Conceded when home team
+h_diff <- df_with_week %>%
+    group_by(team = HomeTeam, week) %>%
+    summarize(HTPD = sum(FTHG) - sum(FTAG))
+head(h_diff, 15)
+dim(h_diff)
+```
+
+```{r}
+
+# Join h_diff and a_diff
+team_diff <- full_join(h_diff, a_diff,
+    by = c("week", "team")
+) %>% replace(is.na(.), 0)
+dim(team_diff)
+
+
+#
+team_diff <- team_diff %>%
+    group_by(team, week) %>%
+    add_count(week) %>%
+    summarize(PD = ATPD + HTPD) %>%
+    mutate(
+        HTPD = (cumsum(PD) - PD) / (row_number(team) - 1)
+    )
+head(team_diff, 20)
+
+# Drop the PD column
+HTPD <- select(team_diff, -PD)
+ATPD <- HTPD %>% rename(ATPD = HTPD)
+```
+
+Joining the 2 new columns to the original DF
+```{r}
+df_with_HTPD <- right_join(HTPD, df_with_week,
+    by = c("team" = "HomeTeam", "week")
+)
+names(df_with_HTPD)[1] <- "HomeTeam"
+head(df_with_HTPD %>% arrange(HomeTeam, week), 20)
+dim(df_with_HTPD)
+
+df_with_ATPD_HTPD <- right_join(ATPD, df_with_HTPD,
+    by = c("team" = "AwayTeam", "week")
+)
+names(df_with_ATPD_HTPD)[1] <- "AwayTeam"
+
+df_with_ATPD_HTPD <- select(
+    df_with_ATPD_HTPD,
+    c(Date, HomeTeam, AwayTeam, week, HTPD, ATPD)
+)
+head(df_with_ATPD_HTPD %>% arrange(AwayTeam, week), 20)
+dim(df_with_ATPD_HTPD)
+
+df_final <- right_join(df_with_ATPD_HTPD, df_with_week,
+    by = c("HomeTeam", "AwayTeam", "week", "Date")
+)
+
+dim(df_final)
+```
+
