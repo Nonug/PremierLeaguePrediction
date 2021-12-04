@@ -168,7 +168,7 @@ cols_odds <- c(
 
 # Keep 34 selected columns
 df <- df %>%
-  filter(year(Date) >= 2015) %>%
+  filter(year(Date) >= 2005) %>%
   select(cols_results, cols_match, cols_odds)
 dim(df)
 
