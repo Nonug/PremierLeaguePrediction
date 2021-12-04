@@ -9,8 +9,8 @@ We're going to predict whether or not the home team will win given a set of othe
 ## Todos
 - [x] Gather data
 - [ ] Data preprocessing
-- [ ] EDA
 - [ ] Feature engineering
+- [ ] EDA
 - [ ] Training models.
 - [ ] Choosing the best model.
 - [ ] Evaluating the model.
