@@ -150,8 +150,9 @@ df <- df %>% drop_na(B365H)
 df <- df %>% drop_na(BWH)
 df <- df %>% drop_na(IWH)
 
+# No need to keep "Time"
 cols_results <- c(
-  "Div", "Season", "Date", "Time", "HomeTeam", "AwayTeam",
+  "Div", "Season", "Date", "HomeTeam", "AwayTeam",
   "FTHG", "FTAG", "FTR", "HTHG", "HTAG", "HTR"
 )
 
@@ -166,7 +167,9 @@ cols_odds <- c(
 )
 
 # Keep 34 selected columns
-df <- df %>% select(cols_results, cols_match, cols_odds)
+df <- df %>%
+  filter(year(Date) >= 2015) %>%
+  select(cols_results, cols_match, cols_odds)
 dim(df)
 
 # turn into factor, pad with 0s, data visualization
@@ -207,7 +210,7 @@ trainRowNumbers <- round(nrow(df) * 0.8)
 # Step 2: Create the training dataset
 trainData <- df[c(1:trainRowNumbers), ]
 
-# Step 3: Create the test dataset
+# Step 3: Create the test dataset (newest 20%)
 testData <- df[-c(1:trainRowNumbers), ]
 
 # Store X and Y for later use.
