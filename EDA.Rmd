@@ -65,6 +65,8 @@ Cleaning missing data.
 #   sum(is.na(x)) / length(x)
 # })
 
+# Plot missing data profile
+
 # missing_plot0 <- plot_missing(df,
 #   title = "Missing data profile by column (before)"
 # )
@@ -171,6 +173,10 @@ dim(df)
 ```
 
 ```{r}
+unique(df$FTR)
+```
+
+```{r}
 ggplot(data = df, aes(x = B365H, y = FTHG)) +
   geom_point() +
   geom_smooth(method = "lm")
@@ -186,11 +192,35 @@ summary(pca)
 ggbiplot(pca, ellipse = TRUE, obs.scale = 1, var.scale = 1, groups = df$FTR)
 ```
 
-# TODO: One-hot encoding, imputation, train/test split
+## TODO: One-hot encoding, imputation
 
-Saving the processed dataframe
+### Train-test split
+Prevent data snooping bias.
+```{r}
+# Create the training and test datasets
+set.seed(100)
+
+# Step 1: Get row numbers for the training data
+# trainRowNumbers <- createDataPartition(df$FTR, p = 0.8, list = FALSE)
+trainRowNumbers <- round(nrow(df) * 0.8)
+
+# Step 2: Create the training dataset
+trainData <- df[c(1:trainRowNumbers), ]
+
+# Step 3: Create the test dataset
+testData <- df[-c(1:trainRowNumbers), ]
+
+# Store X and Y for later use.
+y <- trainData$FTR
+# Should half-time goals score be dropped as well?
+x <- subset(trainData, select = -c(FTR, FTHG, FTAG))
+```
+
+Saving the processed dataframes
 ```{r}
 write_csv(df, "./data/processed_data.csv")
+write_csv(trainData, "./data/training_data.csv")
+write_csv(testData, "./data/testing_data.csv")
 ```
 
 
