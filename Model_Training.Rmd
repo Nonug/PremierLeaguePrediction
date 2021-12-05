@@ -12,7 +12,7 @@ library(pacman)
 p_load(
     "caret", "skimr", "RANN", "randomForest", "fastAdaboost",
     "gbm", "xgboost", "caretEnsemble", "C50", "earth",
-    DataExplorer, nnet
+    DataExplorer, nnet, broom, glmnet
 )
 ```
 
@@ -95,26 +95,38 @@ lattice_save(feature_density, "training_feature_density")
 ```{r}
 set.seed(3612)
 
-# trControl <- trainControl(
-#     method = "repeatedcv",
-#     number = 5,
-#     repeats = 5,
-#     search = "random"
-# )
-trControl <- trainControl(method = "cv", number = 5)
+trControl <- trainControl(
+    method = "repeatedcv",
+    number = 5,
+    repeats = 5,
+    search = "random",
+    verboseIter = TRUE
+)
+# trControl <- trainControl(method = "cv", number = 5)
 
-# logit <- train(
-#     form = FTR ~ .,
-#     data = train_df,
-#     trControl = trControl,
-#     method = "glmnet",
-#     family = "binomial"
-# )
+multinom_CV <- train(
+    form = FTR ~ .,
+    data = train_df,
+    trControl = trControl,
+    method = "glmnet",
+    family = "multinomial"
+)
 
-# logit
+multinom_CV
+fitted <- predict(multinom_CV)
+plot(multinom_CV, main = "Model Accuracies with caret Multinom")
+
+confusionMatrix(reference = y, data = fitted, mode = "everything")
 ```
 
 ### Using nnet
+Below we use the multinom function from the nnet package to estimate a 
+multinomial logistic regression model. 
+
+There are other functions in other R packages capable of multinomial regression. 
+
+We chose the multinom function because it does not require the data to be reshaped 
+(as the mlogit package does)
 ```{r}
 # Training the multinomial model
 # DummyVar not required.
@@ -124,7 +136,6 @@ summary(multinom_model)
 
 # Convert coef to prob, get first 6 predictions.
 head(round(fitted(multinom_model), 2))
-head()
 ```
 
 #### Predicting & Validating
