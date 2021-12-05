@@ -175,8 +175,11 @@ dim(df)
 # turn into factor, pad with 0s, data visualization
 ```
 
+Convert to categorical variables to factors
 ```{r}
-unique(df$FTR)
+chr_cols <- c("FTR", "HomeTeam", "AwayTeam", "Referee")
+df[, chr_cols] <- lapply(df[, chr_cols], factor)
+str(df[, chr_cols])
 ```
 
 ```{r}
@@ -195,35 +198,9 @@ summary(pca)
 ggbiplot(pca, ellipse = TRUE, obs.scale = 1, var.scale = 1, groups = df$FTR)
 ```
 
-## TODO: One-hot encoding, imputation
-
-### Train-test split
-Prevent data snooping bias.
-```{r}
-# Create the training and test datasets
-set.seed(100)
-
-# Step 1: Get row numbers for the training data
-# trainRowNumbers <- createDataPartition(df$FTR, p = 0.8, list = FALSE)
-trainRowNumbers <- round(nrow(df) * 0.8)
-
-# Step 2: Create the training dataset
-trainData <- df[c(1:trainRowNumbers), ]
-
-# Step 3: Create the test dataset (newest 20%)
-testData <- df[-c(1:trainRowNumbers), ]
-
-# Store X and Y for later use.
-y <- trainData$FTR
-# Should half-time goals score be dropped as well?
-x <- subset(trainData, select = -c(FTR, FTHG, FTAG))
-```
-
 Saving the processed dataframes
 ```{r}
 write_csv(df, "./data/processed_data.csv")
-write_csv(trainData, "./data/training_data.csv")
-write_csv(testData, "./data/testing_data.csv")
 ```
 
 

@@ -1,0 +1,107 @@
+---
+title: "StatisticalML3612"
+author: "VladG"
+date: "12/1/2021"
+output: html_document
+---
+
+## Combine data 
+Join data processed in R (processed_data.csv) 
+and data engineering in python (boys_data.csv) 
+
+boys_data: 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(pacman)
+p_load(tidyverse, ggplot2, dplyr, DataExplorer, stringr, lubridate, magrittr)
+# library(ggbiplot)
+
+# Data relocated
+df <- read.csv("./data/processed_data.csv")
+df_py <- read.csv("./data/boys_data.csv")
+
+dim(df)
+dim(df_py)
+```
+
+### Combining data and saving to csv
+```{r}
+# Columns to be converted to factors.
+chr_cols <- c("Season", "FTR", "HomeTeam", "AwayTeam", "Referee")
+
+cols_results <- c(
+  "Season", "Date", "HomeTeam", "AwayTeam",
+  "FTHG", "FTAG", "FTR", "HTHG", "HTAG", "HTR"
+)
+
+# TODO: add explanation
+# Odds: Home, Draw, Away odds:
+#     average from (Bet365, Bet&Win and Interwetten)
+cols_engineered <- c(
+  "HTGS", "ATGS", "HTGC", "ATGC", "HTGD", "ATGD",
+  "HTP", "ATP", "PtDiff", "HTGSCum", "ATGSCum",
+  "HTGCCum", "ATGCCum", "HTGDCum", "ATGDCum",
+  "HTPCum", "ATPCum", "PtDiffCum", "HStreak",
+  "AStreak", "HPrevPos", "APrevPos",
+  "oddsH", "oddsD", "oddsA"
+)
+
+# Features that maye contain foward-looking bias.
+cols_fwdlooking <- c(
+  "FTHG", "FTAG", "HTGS", "ATGS", "HTGC",
+  "ATGC", "HTGD", "ATGD", "HTP", "ATP", "PtDiff"
+)
+
+# Match info features
+# S   - Shots
+# ST  - Shots on Target
+# F   - Fouls Committed
+# C   - Corners
+# Y/R - Yellow/Red Cards
+cols_match <- c(
+  "Referee", "HS", "AS", "HST", "AST", "HF",
+  "AF", "HC", "AC", "HY", "AY", "HR", "AR"
+)
+
+# Combine two dfs
+df_comb <- cbind(df_py, df[, cols_match])
+# Discard index ("X") and Date_interval
+df_comb <- subset(df_comb, select = -c(X, Date_interval))
+
+# convert cat variables to factor
+df_comb[, chr_cols] <- lapply(df_comb[, chr_cols], factor)
+str(df_comb[, chr_cols])
+
+# Checking the remaining features
+dim(df_comb)
+colnames(df_comb)
+
+# Saving to csv
+write_csv(df_comb, "./data/final_processed_data.csv")
+```
+
+### Train-test split
+```{r}
+# Create the training and test datasets
+set.seed(3612)
+
+# Step 1: Get row numbers for the training data
+trainRowNumbers <- round(nrow(df_comb) * 0.8)
+
+# Drop the forward-looking columns for train/test split
+df <- select(df_comb, -cols_fwdlooking)
+
+# Step 2: Create the training dataset
+trainData <- df[c(1:trainRowNumbers), ]
+
+# Step 3: Create the test dataset (newest 20%)
+testData <- df[-c(1:trainRowNumbers)]
+```
+
+Saving the train and test data
+```{r}
+write_csv(trainData, "./data/training_data.csv")
+write_csv(testData, "./data/testing_data.csv")
+```
