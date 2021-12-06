@@ -12,7 +12,7 @@ library(pacman)
 p_load(
     "caret", "skimr", "RANN", "randomForest", "fastAdaboost",
     "gbm", "xgboost", "caretEnsemble", "C50", "earth",
-    DataExplorer, nnet, broom, glmnet
+    DataExplorer, nnet, broom, glmnet, MLmetrics
 )
 ```
 
@@ -31,12 +31,38 @@ y <- train_df$FTR
 x <- subset(train_df, select = -c(FTR))
 x_num <- subset(x, select = -c(HomeTeam, AwayTeam, Referee))
 ```
+
+Plot distribution of A/D/H in training data
+```{r}
+ydist_plot <- ggplot(train_df, aes(FTR, fill = FTR)) +
+    geom_bar() +
+    geom_text(stat = "count", aes(
+        label = round(
+            ..count.. / sum(..count..), 3
+        ),
+        vjust = -1
+    )) +
+    ggtitle("Distribution of A/D/H in training data")
+
+ydist_plot
+ggsave(ydist_plot,
+    filename = "./img/train_y_dist.png",
+    height = 6, width = 6
+)
+```
+
+Create DataExplorer report 
+```{r}
+# create_report(x, output_file = "Xtrain_report.html")
+```
 ### One-Hot Encoding
 ```{r}
-# Converting a categorical variable to as many binary variables as here are categories.
+# Converting a categorical variable to
+# as many binary variables as here are categories.
 dummies_model <- dummyVars(FTR ~ ., data = train_df)
 
-# Create the dummy variables using predict. The Y variable (Purchase) will not be present in trainData_mat.
+# Create the dummy variables using predict.
+# The Y variable (Purchase) will not be present in trainData_mat.
 trainData_mat <- predict(dummies_model, newdata = train_df)
 
 # Convert to dataframe
@@ -48,9 +74,6 @@ colnames(train_encoded)
 ```
 
 
-```{r}
-# create_report(x, output_file = "Xtrain_report.html")
-```
 
 Feature plots (check ./img)
 ```{r}
@@ -58,7 +81,7 @@ Feature plots (check ./img)
 lattice_save <- function(plot, name) {
     setwd("./img/")
     png(file = paste(name, ".png", sep = ""))
-    print(plot)
+    plot(plot)
     dev.off() # Saving the file
     setwd("../")
 }
@@ -97,12 +120,15 @@ set.seed(3612)
 
 trControl <- trainControl(
     method = "repeatedcv",
-    number = 5,
-    repeats = 5,
-    search = "random",
-    verboseIter = TRUE
+    number = 5, # 5-fold CV
+    repeats = 5, # repeat 5-fold CV 5 times
+    p = 0.75, # the training percentage, default = 75%
+    search = "grid", # grid search, Default
+    savePredictions = "final", # saves predictions for optimal tuning parameter
+    classProbs = T, # should class probabilities be returned
+    summaryFunction = multiClassSummary, # results summary function
+    verboseIter = T,
 )
-# trControl <- trainControl(method = "cv", number = 5)
 
 multinom_CV <- train(
     form = FTR ~ .,
@@ -114,8 +140,8 @@ multinom_CV <- train(
 
 multinom_CV
 fitted <- predict(multinom_CV)
-plot(multinom_CV, main = "Model Accuracies with caret Multinom")
-
+multinom_CV_plot <- plot(multinom_CV, main = "Model Accuracies with caret + glmnet Multinom")
+lattice_save(multinom_CV_plot, "Model Accuracies with caret + glmnet Multinom")
 confusionMatrix(reference = y, data = fitted, mode = "everything")
 ```
 
