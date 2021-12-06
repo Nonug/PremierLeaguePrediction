@@ -32,7 +32,7 @@ dim(df_py)
 chr_cols <- c("Season", "FTR", "HomeTeam", "AwayTeam", "Referee")
 
 cols_results <- c(
-  "Season", "Date", "HomeTeam", "AwayTeam",
+  "Season", "Date", "Date_interval", "HomeTeam", "AwayTeam",
   "FTHG", "FTAG", "FTR", "HTHG", "HTAG", "HTR"
 )
 
@@ -51,7 +51,9 @@ cols_engineered <- c(
 # Features that maye contain foward-looking bias.
 cols_fwdlooking <- c(
   "FTHG", "FTAG", "HTGS", "ATGS", "HTGC",
-  "ATGC", "HTGD", "ATGD", "HTP", "ATP", "PtDiff"
+  "ATGC", "HTGD", "ATGD", "HTP", "ATP", "PtDiff",
+  "HS", "AS", "HST", "AST", "HF",
+  "AF", "HC", "AC", "HY", "AY", "HR", "AR"
 )
 
 # Match info features
@@ -68,7 +70,7 @@ cols_match <- c(
 # Combine two dfs
 df_comb <- cbind(df_py, df[, cols_match])
 # Discard index ("X") and Date_interval
-df_comb <- subset(df_comb, select = -c(X, Date_interval))
+df_comb <- subset(df_comb, select = -c(X))
 
 # convert cat variables to factor
 df_comb[, chr_cols] <- lapply(df_comb[, chr_cols], factor)
@@ -84,9 +86,6 @@ write_csv(df_comb, "./data/final_processed_data.csv")
 
 ### Train-test split
 ```{r}
-# Create the training and test datasets
-set.seed(3612)
-
 # Step 1: Get row numbers for the training data
 trainRowNumbers <- round(nrow(df_comb) * 0.8)
 
@@ -97,7 +96,7 @@ df <- select(df_comb, -cols_fwdlooking)
 trainData <- df[c(1:trainRowNumbers), ]
 
 # Step 3: Create the test dataset (newest 20%)
-testData <- df[-c(1:trainRowNumbers)]
+testData <- df[-c(1:trainRowNumbers), ]
 ```
 
 Saving the train and test data

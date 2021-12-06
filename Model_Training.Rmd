@@ -19,12 +19,31 @@ p_load(
 ## Import dataset
 ```{r}
 train_df_timestamped <- read.csv("./data/training_data.csv")
-train_df <- subset(train_df_timestamped, select = -c(Season, Date))
-# test_df <- read.csv("./data/testing_data.csv")
+train_df <- subset(train_df_timestamped,
+    select = -c(Season, Date, Date_interval)
+)
 
+test_df <- read.csv("./data/testing_data.csv")
+test_df <- subset(test_df, select = -c(Season, Date, Date_interval))
+```
+
+```{r}
 # convert cat variables to factor
 chr_cols <- c("FTR", "HomeTeam", "AwayTeam", "Referee")
-train_df[, chr_cols] <- lapply(train_df[, chr_cols], factor)
+
+# This step prevents errors when fitting test data to models
+# if the levels of factors aren't the same.
+for (col in chr_cols) {
+    # Create a levels attribute with the unique values
+    # from attribute1 from both test and train.
+    level <- unique(c(train_df[, col], test_df[, col]))
+    # Create a factor on train and test attribute1 with all
+    # the levels found above.
+    train_df[, col] <- factor(train_df[, col], levels = level)
+    test_df[, col] <- factor(test_df[, col], levels = level)
+}
+
+# level <- unique(c(train_df$FTR, test_df$FTR))
 
 # Store X and Y for later use.
 y <- train_df$FTR
@@ -182,5 +201,14 @@ Accuracy = 0.6083
 svmfit <- svm(FTR ~ ., data = train_df)
 summary(svmfit)
 svm_pred <- predict(svmfit, train_df)
-confusionMatrix(reference = y, data = svm_pred, mode = "everything")
+confusionMatrix(reference = train_df$FTR, data = svm_pred, mode = "everything")
 ```
+
+#### Test data results
+```{r}
+# svm_pred_test <- predict(svmfit, test_df)
+
+# confusionMatrix(reference = test_df$FTR, data = svm_pred_test, mode = "everything")
+```
+
+### xgboost
