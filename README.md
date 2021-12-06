@@ -5,6 +5,7 @@
 We're going to predict whether or not the home team will win given a set of other statistics. The dataset for this was retrieved from [this](http://football-data.co.uk/data.php) site.
 
 [EDA.rmd](./EDA.Rmd): EDA walkthrough
+[Model_training.rmd](./Model_training.rmd): Model Training
 
 ## Todos
 - [x] Gather data
