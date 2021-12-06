@@ -12,7 +12,7 @@ library(pacman)
 p_load(
     "caret", "skimr", "RANN", "randomForest", "fastAdaboost",
     "gbm", "xgboost", "caretEnsemble", "C50", "earth",
-    DataExplorer, nnet, broom, glmnet, MLmetrics
+    DataExplorer, nnet, broom, glmnet, MLmetrics, e1071
 )
 ```
 
@@ -113,7 +113,6 @@ lattice_save(feature_density, "training_feature_density")
 ```
 
 ## Multinomial Logistic Regression model with Cross Validation
-
 ### Using glmnet and caret
 ```{r}
 set.seed(3612)
@@ -129,7 +128,7 @@ trControl <- trainControl(
     summaryFunction = multiClassSummary, # results summary function
     verboseIter = T,
 )
-
+# Elastic net multinom
 multinom_CV <- train(
     form = FTR ~ .,
     data = train_df,
@@ -146,13 +145,11 @@ confusionMatrix(reference = y, data = fitted, mode = "everything")
 ```
 
 ### Using nnet
+
 Below we use the multinom function from the nnet package to estimate a 
-multinomial logistic regression model. 
+multinomial logistic regression model using neural nets 
+(out-of-syllabus? Drop this maybe)
 
-There are other functions in other R packages capable of multinomial regression. 
-
-We chose the multinom function because it does not require the data to be reshaped 
-(as the mlogit package does)
 ```{r}
 # Training the multinomial model
 # DummyVar not required.
@@ -177,3 +174,13 @@ round((sum(diag(tab)) / sum(tab)) * 100, 2)
 
 
 
+## Support Vector Machine
+
+### Stock SVM using radial kernal
+Accuracy = 0.6083
+```{r}
+svmfit <- svm(FTR ~ ., data = train_df)
+summary(svmfit)
+svm_pred <- predict(svmfit, train_df)
+confusionMatrix(reference = y, data = svm_pred, mode = "everything")
+```

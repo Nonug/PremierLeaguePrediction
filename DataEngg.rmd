@@ -30,7 +30,7 @@ TODO: create plots with incidence
 
 Creating 
 
-HTPD and ATPD (Home/Away Team point difference) for each team
+HTGD and ATGD (Home/Away Team point difference) for each team
 = (cumsum(PD) - PD) / (row_number(team) - 1)
 
 where PD = Point Difference = Goals Scored - Goals Conceded,
