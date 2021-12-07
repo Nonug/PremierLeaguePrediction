@@ -14,7 +14,7 @@ p_load(
     "gbm", "xgboost", "caretEnsemble", "C50",
     BiocManager, doMC,
     DataExplorer, nnet, broom, glmnet, MLmetrics,
-    dplyr, CatEncoders, yardstick, kernlab
+    dplyr, CatEncoders, yardstick, kernlab, pROC
 )
 ```
 
@@ -519,9 +519,8 @@ ggsave(multinom.roc,
     height = 6, width = 6
 )
 
-model.roc <- roc(
-    predictor = test_df,
-    response = test.data$FTR,
-    levels = rev(levels(test.data$FTR))
+model.roc <- multiclass.roc(
+    as.numeric(test_df$FTR),
+    as.numeric(multinom_pred)
 )
 ```
