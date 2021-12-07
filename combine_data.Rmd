@@ -70,7 +70,7 @@ cols_match <- c(
   "AF", "HC", "AC", "HY", "AY", "HR", "AR"
 )
 
-df_comb <- df_py
+df_comb <- cbind(df_py, select(df, Referee))
 # Discard index ("X")
 df_comb <- subset(df_comb, select = -c(X))
 
