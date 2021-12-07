@@ -12,8 +12,9 @@ library(pacman)
 p_load(
     "caret", "skimr", "RANN", "randomForest",
     "gbm", "xgboost", "caretEnsemble", "C50",
+    BiocManager, doMC,
     DataExplorer, nnet, broom, glmnet, MLmetrics,
-    doMC, dplyr, CatEncoders, yardstick, kernlab
+    dplyr, CatEncoders, yardstick, kernlab
 )
 ```
 
@@ -275,73 +276,110 @@ ggsave(svm_imp_plot,
 ### xgboost tree
 
 ```{r}
-set.seed(3612)
-# Encode y to [0,1,2] for xgboost
-y_encoder <- LabelEncoder.fit(y)
-y_encoded <- transform(y_encoder, y) - 1
+# set.seed(3612)
+# # Encode y to [0,1,2] for xgboost
+# y_encoder <- LabelEncoder.fit(y)
+# y_encoded <- transform(y_encoder, y) - 1
 
 
 
-dtrain <- xgb.DMatrix(data = as.matrix(train_encoded), label = y_encoded)
+# dtrain <- xgb.DMatrix(data = as.matrix(train_encoded), label = y_encoded)
 
-# tuning parameter grid
-grid_default <- expand.grid(
-    nrounds = 100, # nrounds: Number of trees, default: 100
-    max_depth = 6, # max_depth: Maximum tree depth, default: 6
-    eta = 0.3, # eta: Learning rate, default: 0.3
-    gamma = 0, # gamma: Used for tuning of Regularization, default: 0
-    colsample_bytree = 1, # colsample_bytree: Column sampling, default: 1
-    min_child_weight = 1, # min_child_weight: Minimum leaf weight, default: 1
-    subsample = 1 # subsample: Row sampling, default: 1
-)
+# # tuning parameter grid
+# grid_default <- expand.grid(
+#     nrounds = 100, # nrounds: Number of trees, default: 100
+#     max_depth = 6, # max_depth: Maximum tree depth, default: 6
+#     eta = 0.3, # eta: Learning rate, default: 0.3
+#     gamma = 0, # gamma: Used for tuning of Regularization, default: 0
+#     colsample_bytree = 1, # colsample_bytree: Column sampling, default: 1
+#     min_child_weight = 1, # min_child_weight: Minimum leaf weight, default: 1
+#     subsample = 1 # subsample: Row sampling, default: 1
+# )
 
-xgb_params <- list(
-    booster = "gbtree",
-    "objective" = "multi:softprob",
-    "eval_metric" = "mlogloss",
-    "num_class" = 3
-)
-nround <- 50 # number of XGBoost rounds
-cv.nfold <- 5
+# xgb_params <- list(
+#     booster = "gbtree",
+#     "objective" = "multi:softprob",
+#     "eval_metric" = "mlogloss",
+#     "num_class" = 3
+# )
+# nround <- 50 # number of XGBoost rounds
+# cv.nfold <- 5
 
-xgboost_mod <- xgb.cv(
-    params = xgb_params,
-    nrounds = nround,
-    nfold = cv.nfold,
-    prediction = TRUE,
-    data = dtrain,
-    print_every_n = 10,
-    verbose = 1,
-    tree_method = "gpu_hist",
-    gpu_id = 0
-)
+# xgboost_mod <- xgb.cv(
+#     params = xgb_params,
+#     nrounds = nround,
+#     nfold = cv.nfold,
+#     prediction = TRUE,
+#     data = dtrain,
+#     print_every_n = 10,
+#     verbose = 1,
+#     tree_method = "gpu_hist",
+#     gpu_id = 0
+# )
 
-# multiClassSummary(xgboost_mod)
+# # multiClassSummary(xgboost_mod)
 
-OOF_prediction <- data.frame(xgboost_mod$pred) %>%
-    mutate(
-        max_prob = inverse.transform(
-            y_encoder,
-            max.col(., ties.method = "last")
-        ),
-        label = inverse.transform(y_encoder, y_encoded + 1)
-    )
+# OOF_prediction <- data.frame(xgboost_mod$pred) %>%
+#     mutate(
+#         max_prob = inverse.transform(
+#             y_encoder,
+#             max.col(., ties.method = "last")
+#         ),
+#         label = inverse.transform(y_encoder, y_encoded + 1)
+#     )
 
-head(OOF_prediction)
+# head(OOF_prediction)
 ```
 
 ```{r}
-# confusion matrix
-confusionMatrix(factor(OOF_prediction$max_prob),
-    factor(OOF_prediction$label),
-    mode = "everything"
-)
-# Accuracy - 50%
+# # confusion matrix
+# confusionMatrix(factor(OOF_prediction$max_prob),
+#     factor(OOF_prediction$label),
+#     mode = "everything"
+# )
+# # Accuracy - 50%
 
-# view variable importance plot
-mat <- xgb.importance(model = xgboost_mod)
-xgb.plot.importance(importance_matrix = mat[1:20])
+# # view variable importance plot
+# mat <- xgb.importance(model = xgboost_mod)
+# xgb.plot.importance(importance_matrix = mat[1:20])
 ```
+
+```{r}
+set.seed(3612)
+registerDoMC(cores = 4)
+xgbdart_mod <- train(
+    x = as.matrix(train_encoded),
+    y = y,
+    trControl = trControl_cv,
+    method = "xgbTree",
+    tree_method = "gpu_hist",
+    gpu_id = 0,
+    verbose = T
+    # tuneLength = 5,
+)
+
+xgbdart_mod
+fitted_xgbdart <- predict(xgbdart_mod)
+xgbdart_mod_plot <- plot(xgbdart_mod,
+    main = "Model Accuracies with caret + xgbTree"
+)
+lattice_save(xgbdart_mod_plot, "Model Accuracies with xgbTree")
+
+sink(file = "./outputs/confmat_xgbtree.txt")
+confusionMatrix(reference = y, data = fitted_xgbdart, mode = "everything")
+sink(file = NULL)
+
+# Feature importance
+xgbdart_imp <- varImp(xgbdart_mod, scale = FALSE)
+xgbdart_imp_plot <- ggplot(xgbdart_imp, top = 20, aes(fill = feature)) +
+    ggtitle("Feature importance ranked (top 20) in xgbTree model")
+
+ggsave(xgbdart_imp_plot,
+    filename = "./img/xgbTree_imp.png",
+    height = 6, width = 6
+)
+```
+
 ### XgbLinear + caret
 ```{r}
 set.seed(3612)
@@ -366,10 +404,10 @@ xgboost_mod <- train(
 
 xgboost_mod
 fitted_xgb <- predict(xgboost_mod)
-multinom_CV_plot <- plot(xgboost_mod,
+xgboost_plot <- plot(xgboost_mod,
     main = "Model Accuracies with caret + xgbLinear"
 )
-lattice_save(xgboost_mod, "Model Accuracies with xgbLinear")
+lattice_save(xgboost_plot, "Model Accuracies with xgbLinear")
 
 sink(file = "./outputs/confmat_xgblinear.txt")
 confusionMatrix(reference = y, data = fitted_xgb, mode = "everything")
@@ -391,10 +429,13 @@ ggsave(xgb_imp_plot,
 res <- resamples(list(
     MULTINOM = multinom_CV,
     SVM = svmradial,
-    XgbLinear = xgboost_mod
+    XgbLinear = xgboost_mod,
+    xgbTree = xgbdart_mod
 ))
-res
 sink(file = "models_traindata_results_resampled.txt")
 summary(res)
 sink(file = NULL)
+
+scale <- list(x = list(relation = "free"), y = list(relation = "free"))
+bwplot(res, scales = scale)
 ```
