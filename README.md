@@ -2,7 +2,8 @@
 
 ## Overview
 
-We're going to predict whether or not the home team will win given a set of other statistics. The dataset for this was retrieved from [this](http://football-data.co.uk/data.php) site.
+Hello and welcome to our project's GitHub repository. Essentially we have opted for using this as our Appendix, as it saves the pdf document from being over 50 pages long!
+
 
 [EDA.rmd](./EDA.Rmd): EDA walkthrough
 [Model_training.rmd](./Model_training.rmd): Model Training
@@ -11,10 +12,10 @@ We're going to predict whether or not the home team will win given a set of othe
 - [x] Gather data
 - [x] Data preprocessing
 - [x] Feature engineering
-- [ ] EDA
-- [ ] Training models.
-- [ ] Choosing the best model.
-- [ ] Evaluating the model.
-- [ ] Tuning Hyperparameters on the model.
-- [ ] Interpreting the model results.
+- [x] EDA
+- [x] Training models.
+- [x] Choosing the best model.
+- [x] Evaluating the model.
+- [x] Tuning Hyperparameters on the model.
+- [x] Interpreting the model results.
 
