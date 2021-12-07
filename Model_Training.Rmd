@@ -496,7 +496,7 @@ for (metric in res$metrics) {
     )
 }
 ```
-
+# Generate Test results
 ```{r}
 
 multinom_pred <- predict(multinom_CV, test_df)
@@ -527,51 +527,24 @@ multiClassSummary(test_res, lev = levels(train_df$FTR), model = xgbtree_mod)
 sink(file = NULL)
 
 
-for (rowname in rownames(model_pred_list)) {
-    pred_ <- model_pred_list[rowname, ]
+# for (rowname in rownames(model_pred_list)) {
+#     pred_ <- model_pred_list[rowname, ]
 
-    test_res <- cbind(
-        test_df$FTR,
-        predict(eval(parse(text = rowname)), newdata = test_df, type = "prob"), eval(parse(text = pred_))
-    )
-    colnames(test_res) <- c("obs", "D", "A", "H", "pred")
+#     test_res <- cbind(
+#         test_df$FTR,
+#         predict(eval(parse(text = rowname)), newdata = test_df, type = "prob"), eval(parse(text = pred_))
+#     )
+#     colnames(test_res) <- c("obs", "D", "A", "H", "pred")
 
-    sink(file = paste("./outputs/", rowname, "_test_res.txt", sep = ""))
-    multiClassSummary(test_res, lev = levels(train_df$FTR), model = eval(parse(text = rowname)))
-    sink(file = NULL)
-}
+#     sink(file = paste("./outputs/", rowname, "_test_res.txt", sep = ""))
+#     multiClassSummary(test_res, lev = levels(train_df$FTR), model = eval(parse(text = rowname)))
+#     sink(file = NULL)
+# }
 ```
 
 
-```{r}
-compute.auc <- function(model, test.data) {
-    # model.probs <- predict(model, test.data[, 1:34], type = "prob")
-    # multinom_prob <- predict(multinom_CV, newdata = test_df, type = "prob")
-    model.probs <- predict(model, newdata = test.data, type = "prob")
-
-    model.roc <- multiclass.roc(
-        test.data$FTR,
-        model.probs,
-        plot = T
-    )
-
-    # model.roc.fp <- 1 - model.roc$specificities
-    # model.roc.tp <- model.roc$sensitivities
-    # model.roc.plot <- plot(
-    #     x = model.roc.fp, y = model.roc.tp, type = "l",
-    #     xlab = "false positive rate (1 - specificity)",
-    #     ylab = "true positive rate (sensitivity)",
-    #     main = "ROC Curve"
-    # )
-
-    # model.auc <- model.roc$auc
-
-    return
-}
-```
 
 ```{r}
-multinom.roc <- compute.auc(multinom_CV, test_df)
 
 multinom_prob <- predict(multinom_CV, newdata = test_df, type = "prob")
 

@@ -1,0 +1,10 @@
+               logLoss                    AUC                  prAUC 
+             0.9669807              0.6828756              0.5131995 
+              Accuracy                  Kappa                Mean_F1 
+             0.5374095              0.2202875                     NA 
+      Mean_Sensitivity       Mean_Specificity    Mean_Pos_Pred_Value 
+             0.4479216              0.7377868                    NaN 
+   Mean_Neg_Pred_Value         Mean_Precision            Mean_Recall 
+             0.7695492                     NA              0.4479216 
+   Mean_Detection_Rate Mean_Balanced_Accuracy 
+             0.1791365              0.5928542 
