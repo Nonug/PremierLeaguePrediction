@@ -6,13 +6,17 @@ Hello and welcome to our project's GitHub repository. Essentially we have opted 
 Documents of interest are:  
 
   -> Data Profile Reports: here you can observe what the dataset looked like before undergoing the cleaning process and after  
+  
+    [ReportDataOld.html]: The Data Profile Report of the original data
+    [ReportDataClean.html]: The Data Profile Report of the cleaned data
+    
   -> All RMD files showcasing code for different aspects of the project
 
-[DataEngg.rmd](./DataEngg.Rmd): Data Engeneering Part  
-[combine_data.rmd](./combine_data.Rmd): The Data Concatanation  
-[DataVis.rmd](./DataVis.Rmd): Data Visualization Part of the EDA  
-[Model.rmd](./Model.Rmd): old model, not important  
-[EDA.rmd](./EDA.Rmd): EDA walkthrough  
-[Model_training.rmd](./Model_training.rmd): Model Training
+  [DataEngg.rmd](./DataEngg.Rmd): Data Engeneering Part  
+  [combine_data.rmd](./combine_data.Rmd): The Data Concatanation  
+  [DataVis.rmd](./DataVis.Rmd): Data Visualization Part of the EDA  
+  [Model.rmd](./Model.Rmd): old model, not important  
+  [EDA.rmd](./EDA.Rmd): EDA walkthrough  
+  [Model_training.rmd](./Model_training.rmd): Model Training
 
 
