@@ -10,10 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(pacman)
 p_load(
-    "caret", "skimr", "RANN", "randomForest", "fastAdaboost",
-    "gbm", "xgboost", "caretEnsemble", "C50", "earth",
-    DataExplorer, nnet, broom, glmnet, MLmetrics, e1071,
-    doParallel, dplyr, CatEncoders
+    "caret", "skimr", "RANN", "randomForest",
+    "gbm", "xgboost", "caretEnsemble", "C50",
+    DataExplorer, nnet, broom, glmnet, MLmetrics,
+    doParallel, dplyr, CatEncoders, yardstick, kernlab
 )
 ```
 
@@ -73,7 +73,7 @@ ggsave(ydist_plot,
 
 Create DataExplorer report 
 ```{r}
-# create_report(x, output_file = "Xtrain_report.html")
+create_report(x, output_file = "Xtrain_report.html")
 ```
 ### One-Hot Encoding
 ```{r}
@@ -153,7 +153,7 @@ trControl <- trainControl(
 multinom_CV <- train(
     form = FTR ~ .,
     data = train_df,
-    trControl = trControl,
+    trControl = trControl_cv,
     method = "glmnet",
     family = "multinomial"
 )
@@ -202,10 +202,57 @@ multinomial logistic regression model using neural nets
 ### Stock SVM using radial kernal
 Accuracy = 0.6083
 ```{r}
-svmfit <- svm(FTR ~ ., data = train_df)
+svmfit <- svm(FTR ~ ., data = train_df, , probability = TRUE)
 summary(svmfit)
-svm_pred <- predict(svmfit, train_df)
+svm_pred <- predict(svmfit, train_df, probability = TRUE)
 confusionMatrix(reference = train_df$FTR, data = svm_pred, mode = "everything")
+```
+
+metrics
+```{r}
+roc_auc(as.numeric(train_df$FTR), attr(svm_pred, "probabilities"))
+```
+### SVM radial kernal using caret
+```{r}
+trControl_cv <- trainControl(
+    method = "cv",
+    number = 5, # 5-fold CV
+    p = 0.75, # the training percentage, default = 75%
+    search = "grid", # grid search, Default
+    savePredictions = "final", # saves predictions for optimal tuning parameter
+    classProbs = T, # should class probabilities be returned
+    summaryFunction = multiClassSummary, # results summary function
+    verboseIter = T,
+    allowParallel = T,
+)
+
+svmradial <- train(
+    x = train_encoded,
+    y = y,
+    data = train_df,
+    trControl = trControl_cv,
+    method = "svmRadial",
+)
+
+svmradial
+svmradial_pred <- predict(svmradial)
+svmradial_plot <- plot(svmradial,
+    main = "Model Accuracies with caret + glmnet Multinom"
+)
+lattice_save(svmradial_plot, "Model Accuracies with SVM (radial kernel)")
+confusionMatrix(reference = y, data = svmradial_pred, mode = "everything")
+```
+Feature importance
+```{r}
+# Feature importance
+svm_imp <- varImp(svmradial, scale = FALSE)
+svm_imp_plot <- ggplot(svm_imp, top = 20, aes(fill = feature)) +
+    ggtitle("Feature importance ranked (top 20) in SVM radial model")
+
+ggsave(svm_imp_plot,
+    filename = "./img/svmradial_imp.png",
+    height = 6, width = 6
+)
 ```
 
 #### Test data results
@@ -215,8 +262,7 @@ confusionMatrix(reference = train_df$FTR, data = svm_pred, mode = "everything")
 # confusionMatrix(reference = test_df$FTR, data = svm_pred_test, mode = "everything")
 ```
 
-### xgboost
-
+### xgboost tree
 
 ```{r}
 set.seed(3612)
@@ -274,7 +320,6 @@ OOF_prediction <- data.frame(xgboost_mod$pred) %>%
 head(OOF_prediction)
 ```
 
-
 ```{r}
 # confusion matrix
 confusionMatrix(factor(OOF_prediction$max_prob),
@@ -287,23 +332,9 @@ confusionMatrix(factor(OOF_prediction$max_prob),
 mat <- xgb.importance(model = xgboost_mod)
 xgb.plot.importance(importance_matrix = mat[1:20])
 ```
-
+### XgbLinear + caret
 ```{r}
 set.seed(3612)
-
-trControl <- trainControl(
-    method = "cv",
-    number = 5, # 5-fold CV
-    # repeats = 5, # repeat 5-fold CV 5 times
-    p = 0.75, # the training percentage, default = 75%
-    search = "grid", # grid search, Default
-    savePredictions = "final", # saves predictions for optimal tuning parameter
-    classProbs = T, # should class probabilities be returned
-    summaryFunction = multiClassSummary, # results summary function
-    verboseIter = T,
-)
-
-
 # cl <- makePSOCKcluster(3)
 # registerDoParallel(cl)
 ## All subsequent models are then run in parallel
@@ -313,18 +344,42 @@ trControl <- trainControl(
 
 
 xgboost_mod <- train(
-    x = train_encoded,
+    x = as.matrix(train_encoded),
     y = y,
-    # trControl = trControl,
-    method = "xgbDART",
+    trControl = trControl_cv,
+    method = "xgbLinear",
+    tree_method = "gpu_hist",
+    gpu_id = 0,
+    verbose = T
     # tuneLength = 5,
 )
 
 xgboost_mod
-fitted_xgb <- predict(xgboost_mod, train_df)
+fitted_xgb <- predict(xgboost_mod)
 multinom_CV_plot <- plot(xgboost_mod,
-    main = "Model Accuracies with caret + xgbDART"
+    main = "Model Accuracies with caret + xgbLinear"
 )
-lattice_save(xgboost_mod, "Model Accuracies with caret + glmnet Multinom")
+lattice_save(xgboost_mod, "Model Accuracies with xgbLinear")
 confusionMatrix(reference = y, data = fitted_xgb, mode = "everything")
+
+# Feature importance
+xgb_imp <- varImp(xgboost_mod, scale = FALSE)
+xgb_imp_plot <- ggplot(xgb_imp, top = 20, aes(fill = feature)) +
+    ggtitle("Feature importance ranked (top 20) in xgbLinear model")
+
+ggsave(xgb_imp_plot,
+    filename = "./img/xgbLinear_imp.png",
+    height = 6, width = 6
+)
+```
+
+## Compare different models
+```{r}
+res <- resamples(list(
+    MULTINOM = multinom_CV,
+    SVM = svmradial,
+    XgbLinear = xgboost_mod
+))
+res
+summary(res)
 ```
