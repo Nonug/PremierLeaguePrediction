@@ -518,12 +518,12 @@ model_pred_list <- data.frame(
 
 test_res <- cbind(
     test_df$FTR,
-    predict(multinom_CV, newdata = test_df, type = "prob"), multinom_pred
+    predict(xgbtree_mod, newdata = test_encoded, type = "prob"), xgbTree_pred
 )
 colnames(test_res) <- c("obs", "D", "A", "H", "pred")
 
-sink(file = paste("./outputs/", "multinom_pred", "_test_res.txt", sep = ""))
-multiClassSummary(test_res, lev = levels(train_df$FTR), model = multinom_CV)
+sink(file = paste("./outputs/", "xgbTree_pred", "_test_res.txt", sep = ""))
+multiClassSummary(test_res, lev = levels(train_df$FTR), model = xgbtree_mod)
 sink(file = NULL)
 
 
