@@ -7,8 +7,9 @@ Documents of interest are:
 
   -> Data Profile Reports: here you can observe what the dataset looked like before undergoing the cleaning process and after  
   
-    [ReportDataClean.html](./Data Profile Reports/ReportDataClean.html): The Data Profile Report of the original data
-  
+    [ReportDataOld.html]: The Data Profile Report of the original data
+    [ReportDataClean.html]: The Data Profile Report of the cleaned data
+    
   -> All RMD files showcasing code for different aspects of the project
 
   [DataEngg.rmd](./DataEngg.Rmd): Data Engeneering Part  
