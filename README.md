@@ -8,17 +8,11 @@ Documents of interest are:
   -> Data Profile Reports: here you can observe what the dataset looked like before undergoing the cleaning process and after  
   -> All RMD files showcasing code for different aspects of the project
 
-[EDA.rmd](./EDA.Rmd): EDA walkthrough
+[DataEngg.rmd] (./DataEngg.Rmd): Data Engeneering Part
+[combine_data.rmd] (./combine_data.Rmd): The Data Concatanation
+[DataVis.rmd] (./DataVis.Rmd): Data Visualization Part of the EDA
+[Model.rmd] (./Model.Rmd): old model, not important
+[EDA.rmd](./EDA.Rmd): EDA walkthrough  
 [Model_training.rmd](./Model_training.rmd): Model Training
 
-## Todos
-- [x] Gather data
-- [x] Data preprocessing
-- [x] Feature engineering
-- [x] EDA
-- [x] Training models.
-- [x] Choosing the best model.
-- [x] Evaluating the model.
-- [x] Tuning Hyperparameters on the model.
-- [x] Interpreting the model results.
 
