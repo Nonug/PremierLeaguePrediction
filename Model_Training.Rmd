@@ -381,6 +381,8 @@ ggsave(xgbdart_imp_plot,
 ```
 
 ### XgbLinear + caret
+
+## 
 ```{r}
 set.seed(3612)
 # cl <- makePSOCKcluster(3)
@@ -424,6 +426,15 @@ ggsave(xgb_imp_plot,
 )
 ```
 
+## Ensemble Model
+```{r}
+algorithmList <- c("fv", "adaboost", "earth", "xgbDART", "svmRadial")
+
+set.seed(100)
+models <- caretList(Purchase ~ ., data = trainData, trControl = trainControl, methodList = algorithmList)
+results <- resamples(models)
+summary(results)
+```
 ## Compare different models
 ```{r}
 res <- resamples(list(
@@ -445,4 +456,14 @@ for (metric in res$metrics) {
         paste("Model Evaluation Metrics (", metric, ")", sep = "")
     )
 }
+```
+
+```{r}
+
+multinom_pred <- predict(multinom_CV, test_df)
+SVM_pred <- predict(svmradial, test_df)
+XgbLinear_pred <- predict(xgboost_mod, test_df)
+xgbTree_pred <- predict(xgbdart_mod, test_df)
+
+confusionMatrix(reference = test_df$FTR, data = multinom_pred)
 ```
