@@ -147,6 +147,7 @@ trControl <- trainControl(
     classProbs = T, # should class probabilities be returned
     summaryFunction = multiClassSummary, # results summary function
     verboseIter = T,
+    allowParallel = T,
 )
 # Elastic net multinom
 multinom_CV <- train(
@@ -173,25 +174,25 @@ multinomial logistic regression model using neural nets
 (out-of-syllabus? Drop this maybe)
 
 ```{r}
-# Training the multinomial model
-# DummyVar not required.
-multinom_model <- multinom(FTR ~ ., data = train_df, seed = 3612)
-# Checking the model
-summary(multinom_model)
+# # Training the multinomial model
+# # DummyVar not required.
+# multinom_model <- multinom(FTR ~ ., data = train_df, seed = 3612)
+# # Checking the model
+# summary(multinom_model)
 
-# Convert coef to prob, get first 6 predictions.
-head(round(fitted(multinom_model), 2))
+# # Convert coef to prob, get first 6 predictions.
+# head(round(fitted(multinom_model), 2))
 ```
 
 #### Predicting & Validating
 
 ```{r}
-# Predicting the values for train dataset
-FTRPredicted <- predict(multinom_model, newdata = train_df, "class")
-# Building classification table
-tab <- table(y, FTRPredicted)
-# Calculating accuracy - sum of diagonal elements divided by total obs
-round((sum(diag(tab)) / sum(tab)) * 100, 2)
+# # Predicting the values for train dataset
+# FTRPredicted <- predict(multinom_model, newdata = train_df, "class")
+# # Building classification table
+# tab <- table(y, FTRPredicted)
+# # Calculating accuracy - sum of diagonal elements divided by total obs
+# round((sum(diag(tab)) / sum(tab)) * 100, 2)
 ```
 
 
@@ -226,7 +227,20 @@ y_encoded = transform(y_encoder, y) - 1
 
 
 dtrain <- xgb.DMatrix(data = as.matrix(train_encoded), label = y_encoded)
+
+# tuning parameter grid
+grid_default <- expand.grid(
+  nrounds = 100, # nrounds: Number of trees, default: 100
+  max_depth = 6, # max_depth: Maximum tree depth, default: 6
+  eta = 0.3, # eta: Learning rate, default: 0.3
+  gamma = 0, # gamma: Used for tuning of Regularization, default: 0
+  colsample_bytree = 1, # colsample_bytree: Column sampling, default: 1
+  min_child_weight = 1, # min_child_weight: Minimum leaf weight, default: 1
+  subsample = 1 # subsample: Row sampling, default: 1
+)
+
 xgb_params <- list(
+    booster = "gbtree",
     "objective" = "multi:softprob",
     "eval_metric" = "mlogloss",
     "num_class" = 3
@@ -240,13 +254,13 @@ xgboost_mod <- xgb.cv(
     nfold = cv.nfold,
     prediction = TRUE,
     data = dtrain,
+    print_every_n = 10,
     verbose = 1,
     tree_method = "gpu_hist",
     gpu_id = 0
 )
 
-multiClassSummary(xgboost_mod)
-# predict(xgboost_mod, as.matrix(train_encoded))
+# multiClassSummary(xgboost_mod)
 
 OOF_prediction <- data.frame(xgboost_mod$pred) %>%
   mutate(max_prob = inverse.transform(y_encoder, 
@@ -255,9 +269,21 @@ OOF_prediction <- data.frame(xgboost_mod$pred) %>%
          label = inverse.transform(y_encoder,y_encoded + 1))
 
 head(OOF_prediction)
+```
+
+
+```{r}
+#confusion matrix
 confusionMatrix(factor(OOF_prediction$max_prob),
                 factor(OOF_prediction$label),
                 mode = "everything")
+#Accuracy - 50% 
+
+#view variable importance plot
+mat <- xgb.importance(model = xgboost_mod)
+xgb.plot.importance(importance_matrix = mat[1:20]) 
+
+
 
 ```
 ```{r}

@@ -20,7 +20,7 @@ p_load(tidyverse, ggplot2, dplyr, DataExplorer, stringr, lubridate, magrittr)
 
 # Data relocated
 df <- read.csv("./data/processed_data.csv")
-df_py <- read.csv("./data/boys_data.csv")
+df_py <- read.csv("./data/use_this_data.csv")
 
 dim(df)
 dim(df_py)
@@ -43,7 +43,10 @@ cols_engineered <- c(
   "HTGS", "ATGS", "HTGC", "ATGC", "HTGD", "ATGD",
   "HTP", "ATP", "PtDiff", "HTGSCum", "ATGSCum",
   "HTGCCum", "ATGCCum", "HTGDCum", "ATGDCum",
-  "HTPCum", "ATPCum", "PtDiffCum", "HStreak",
+  "HTPCum", "ATPCum", "HSCum", "ASCum", "HSTCum",
+  "ASTCum", "HFCum", "AFCum", "HCCum", "ACCum",
+  "HYCum", "AYCum", "HRCum", "ARCum",
+  "PtDiffCum", "HStreak",
   "AStreak", "HPrevPos", "APrevPos",
   "oddsH", "oddsD", "oddsA"
 )
@@ -67,14 +70,13 @@ cols_match <- c(
   "AF", "HC", "AC", "HY", "AY", "HR", "AR"
 )
 
-# Combine two dfs
-df_comb <- cbind(df_py, df[, cols_match])
-# Discard index ("X") and Date_interval
+df_comb <- df_py
+# Discard index ("X")
 df_comb <- subset(df_comb, select = -c(X))
 
 # convert cat variables to factor
-df_comb[, chr_cols] <- lapply(df_comb[, chr_cols], factor)
-str(df_comb[, chr_cols])
+# df_comb[, chr_cols] <- lapply(df_comb[, chr_cols], factor)
+# str(df_comb[, chr_cols])
 
 # Checking the remaining features
 dim(df_comb)
