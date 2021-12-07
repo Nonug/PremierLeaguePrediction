@@ -13,7 +13,7 @@ p_load(
     "caret", "skimr", "RANN", "randomForest", "fastAdaboost",
     "gbm", "xgboost", "caretEnsemble", "C50", "earth",
     DataExplorer, nnet, broom, glmnet, MLmetrics, e1071,
-    doParallel
+    doParallel, dplyr, ‘CatEncoders’
 )
 ```
 
@@ -215,6 +215,51 @@ confusionMatrix(reference = train_df$FTR, data = svm_pred, mode = "everything")
 ```
 
 ### xgboost
+
+
+```{r}
+set.seed(3612)
+# Encode y to [0,1,2] for xgboost
+y_encoder <- LabelEncoder.fit(y)
+y_encoded = transform(y_encoder, y) - 1
+
+
+
+dtrain <- xgb.DMatrix(data = as.matrix(train_encoded), label = y_encoded)
+xgb_params <- list(
+    "objective" = "multi:softprob",
+    "eval_metric" = "mlogloss",
+    "num_class" = 3
+)
+nround <- 50 # number of XGBoost rounds
+cv.nfold <- 5
+
+xgboost_mod <- xgb.cv(
+    params = xgb_params,
+    nrounds = nround,
+    nfold = cv.nfold,
+    prediction = TRUE,
+    data = dtrain,
+    verbose = 1,
+    tree_method = "gpu_hist",
+    gpu_id = 0
+)
+
+multiClassSummary(xgboost_mod)
+# predict(xgboost_mod, as.matrix(train_encoded))
+
+OOF_prediction <- data.frame(xgboost_mod$pred) %>%
+  mutate(max_prob = inverse.transform(y_encoder, 
+            max.col(., ties.method = "last")
+            ),
+         label = inverse.transform(y_encoder,y_encoded + 1))
+
+head(OOF_prediction)
+confusionMatrix(factor(OOF_prediction$max_prob),
+                factor(OOF_prediction$label),
+                mode = "everything")
+
+```
 ```{r}
 set.seed(3612)
 
@@ -233,18 +278,19 @@ trControl <- trainControl(
 
 # cl <- makePSOCKcluster(3)
 # registerDoParallel(cl)
-
 ## All subsequent models are then run in parallel
+## When you are done:
+# stopCluster(cl)
+
+
+
 xgboost_mod <- train(
     x = train_encoded,
     y = y,
-    trControl = trControl,
+    # trControl = trControl,
     method = "xgbDART",
     # tuneLength = 5,
 )
-
-
-
 
 xgboost_mod
 fitted_xgb <- predict(xgboost_mod, train_df)
@@ -253,7 +299,4 @@ multinom_CV_plot <- plot(xgboost_mod,
 )
 lattice_save(xgboost_mod, "Model Accuracies with caret + glmnet Multinom")
 confusionMatrix(reference = y, data = fitted_xgb, mode = "everything")
-
-## When you are done:
-# stopCluster(cl)
 ```
