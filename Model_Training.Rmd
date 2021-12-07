@@ -12,21 +12,20 @@ library(pacman)
 p_load(
     "caret", "skimr", "RANN", "randomForest",
     "gbm", "xgboost", "caretEnsemble", "C50",
-    BiocManager, doMC,
-    DataExplorer, nnet, broom, glmnet, MLmetrics,
+    BiocManager, doMC, DataExplorer, nnet, broom, glmnet, MLmetrics,
     dplyr, CatEncoders, yardstick, kernlab, pROC
 )
 ```
 
 ## Import dataset
 ```{r}
-train_df_timestamped <- read.csv("./data/training_data_fwd.csv")
+train_df_timestamped <- read.csv("./data/training_data.csv")
 
 train_df <- subset(train_df_timestamped,
     select = -c(Season, Date, Date_interval)
 )
 
-test_df <- read.csv("./data/testing_data_fwd.csv")
+test_df <- read.csv("./data/testing_data.csv")
 test_df <- subset(test_df, select = -c(Season, Date, Date_interval))
 ```
 
@@ -204,6 +203,16 @@ ggsave(multinom_CV_plot,
 sink(file = "./outputs/confmat_multinom.txt")
 confusionMatrix(reference = y, data = fitted, mode = "everything")
 sink(file = NULL)
+
+# Feature importance
+multinom_imp <- varImp(multinom_CV, scale = T)
+multinom_imp_plot <- ggplot(multinom_imp, top = 20, aes(fill = feature)) +
+    ggtitle("Feature importance ranked (top 20) in multinomial logit model")
+
+ggsave(multinom_imp_plot,
+    filename = "./img/multinom_imp.png",
+    height = 6, width = 8
+)
 ```
 
 ### Using nnet
@@ -373,7 +382,7 @@ ggsave(svm_imp_plot,
 ```{r}
 set.seed(3612)
 registerDoMC(cores = 4)
-xgbdart_mod <- train(
+xgbtree_mod <- train(
     x = as.matrix(train_encoded),
     y = y,
     trControl = trControl_cv,
@@ -384,23 +393,23 @@ xgbdart_mod <- train(
     # tuneLength = 5,
 )
 
-xgbdart_mod
-fitted_xgbdart <- predict(xgbdart_mod)
-xgbdart_mod_plot <- plot(xgbdart_mod,
+xgbtree_mod
+fitted_xgbtree <- predict(xgbtree_mod)
+xgbtree_mod_plot <- plot(xgbtree_mod,
     main = "Model Accuracies with caret + xgbTree"
 )
-lattice_save(xgbdart_mod_plot, "Model Accuracies with xgbTree")
+lattice_save(xgbtree_mod_plot, "Model Accuracies with xgbTree")
 
 sink(file = "./outputs/confmat_xgbtree.txt")
-confusionMatrix(reference = y, data = fitted_xgbdart, mode = "everything")
+confusionMatrix(reference = y, data = fitted_xgbtree, mode = "everything")
 sink(file = NULL)
 
 # Feature importance
-xgbdart_imp <- varImp(xgbdart_mod, scale = FALSE)
-xgbdart_imp_plot <- ggplot(xgbdart_imp, top = 20, aes(fill = feature)) +
+xgbtree_imp <- varImp(xgbtree_mod, scale = FALSE)
+xgbtree_imp_plot <- ggplot(xgbtree_imp, top = 20, aes(fill = feature)) +
     ggtitle("Feature importance ranked (top 20) in xgbTree model")
 
-ggsave(xgbdart_imp_plot,
+ggsave(xgbtree_imp_plot,
     filename = "./img/xgbTree_imp.png",
     height = 6, width = 6
 )
@@ -454,10 +463,14 @@ ggsave(xgb_imp_plot,
 
 ## Ensemble Model
 ```{r}
-algorithmList <- c("glm", "xgbDART", "svmRadial")
+algorithmList <- c("glm", "xgbtree", "svmRadial")
 
 set.seed(100)
-models <- caretList(FTR ~ ., data = train_df, trControl = trainControl, methodList = algorithmList)
+models <- caretList(FTR ~ .,
+    data = train_df,
+    trControl = trainControl,
+    methodList = algorithmList
+)
 results <- resamples(models)
 summary(results)
 ```
@@ -467,7 +480,7 @@ res <- resamples(list(
     MULTINOM = multinom_CV,
     SVM = svmradial,
     XgbLinear = xgboost_mod,
-    xgbTree = xgbdart_mod
+    xgbTree = xgbtree_mod
 ))
 sink(file = "./outputs/models_traindata_results_resampled.txt")
 summary(res)
@@ -489,16 +502,32 @@ for (metric in res$metrics) {
 multinom_pred <- predict(multinom_CV, test_df)
 SVM_pred <- predict(svmradial, test_df)
 XgbLinear_pred <- predict(xgboost_mod, test_df)
-xgbTree_pred <- predict(xgbdart_mod, test_df)
+xgbTree_pred <- predict(xgbtree_mod, test_df)
 
-# confusionMatrix(reference = test_df$FTR, data = multinom_pred)
+# model_pred_list <- list(
+#     multinom_CV = multinom_pred,
+#     svmradial = SVM_pred,
+#     xgboost_mod = XgbLinear_pred,
+#     xgbtree_mod = xgbTree_pred
+# )
+
+model_pred_list <- list(
+    a = 1,
+    b = 2,
+    c = 3,
+    d = 4
+)
+
+for (k in model_pred_list) {
+    class(k)
+}
 
 multinom_test_res <- cbind(
     test_df$FTR,
     predict(multinom_CV, newdata = test_df, type = "prob"), multinom_pred
 )
-colnames(multinom_test_res) <- c("truth", "D", "A", "H", "pred")
-# multiClassSummary(multinom_test_res, lev = levels(train_df$FTR), model = multinom_CV)
+colnames(multinom_test_res) <- c("obs", "D", "A", "H", "pred")
+multiClassSummary(multinom_test_res, lev = levels(train_df$FTR), model = multinom_CV)
 metrics(multinom_test_res, truth, pred)
 
 res_plot <- plot(roc_auc(multinom_test_res, truth, D:H))
@@ -545,6 +574,8 @@ model.roc <- multiclass.roc(
     test_df$FTR,
     multinom_prob
 )
+
+metric(multinom_CV)
 
 x11(width = 10, height = 3)
 par(mfrow = c(1, 3))
