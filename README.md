@@ -1,20 +1,18 @@
 # STAT3612 Project - Predicting Premium League Winning Team
 
-## Overview
+## Appendix
 
-We're going to predict whether or not the home team will win given a set of other statistics. The dataset for this was retrieved from [this](http://football-data.co.uk/data.php) site.
+Hello and welcome to our project's GitHub repository. Essentially we have opted for using this as our Appendix, as it saves the pdf document from being over 50 pages long!
+Documents of interest are:  
 
-[EDA.rmd](./EDA.Rmd): EDA walkthrough
+  -> Data Profile Reports: here you can observe what the dataset looked like before undergoing the cleaning process and after  
+  -> All RMD files showcasing code for different aspects of the project
+
+[DataEngg.rmd](./DataEngg.Rmd): Data Engeneering Part  
+[combine_data.rmd](./combine_data.Rmd): The Data Concatanation  
+[DataVis.rmd](./DataVis.Rmd): Data Visualization Part of the EDA  
+[Model.rmd](./Model.Rmd): old model, not important  
+[EDA.rmd](./EDA.Rmd): EDA walkthrough  
 [Model_training.rmd](./Model_training.rmd): Model Training
 
-## Todos
-- [x] Gather data
-- [x] Data preprocessing
-- [x] Feature engineering
-- [ ] EDA
-- [ ] Training models.
-- [ ] Choosing the best model.
-- [ ] Evaluating the model.
-- [ ] Tuning Hyperparameters on the model.
-- [ ] Interpreting the model results.
 
