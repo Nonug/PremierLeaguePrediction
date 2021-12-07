@@ -437,5 +437,12 @@ summary(res)
 sink(file = NULL)
 
 scale <- list(x = list(relation = "free"), y = list(relation = "free"))
-bwplot(res, scales = scale)
+
+for (metric in res$metrics) {
+    bw_res_plot <- bwplot(res, scales = scale, metric = metric)
+    lattice_save(
+        bw_res_plot,
+        paste("Model Evaluation Metrics (", metric, ")", sep = "")
+    )
+}
 ```
