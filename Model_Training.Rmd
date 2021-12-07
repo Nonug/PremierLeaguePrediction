@@ -13,7 +13,7 @@ p_load(
     "caret", "skimr", "RANN", "randomForest", "fastAdaboost",
     "gbm", "xgboost", "caretEnsemble", "C50", "earth",
     DataExplorer, nnet, broom, glmnet, MLmetrics, e1071,
-    doParallel, dplyr, ‘CatEncoders’
+    doParallel, dplyr, CatEncoders
 )
 ```
 
@@ -222,7 +222,7 @@ confusionMatrix(reference = train_df$FTR, data = svm_pred, mode = "everything")
 set.seed(3612)
 # Encode y to [0,1,2] for xgboost
 y_encoder <- LabelEncoder.fit(y)
-y_encoded = transform(y_encoder, y) - 1
+y_encoded <- transform(y_encoder, y) - 1
 
 
 
@@ -230,13 +230,13 @@ dtrain <- xgb.DMatrix(data = as.matrix(train_encoded), label = y_encoded)
 
 # tuning parameter grid
 grid_default <- expand.grid(
-  nrounds = 100, # nrounds: Number of trees, default: 100
-  max_depth = 6, # max_depth: Maximum tree depth, default: 6
-  eta = 0.3, # eta: Learning rate, default: 0.3
-  gamma = 0, # gamma: Used for tuning of Regularization, default: 0
-  colsample_bytree = 1, # colsample_bytree: Column sampling, default: 1
-  min_child_weight = 1, # min_child_weight: Minimum leaf weight, default: 1
-  subsample = 1 # subsample: Row sampling, default: 1
+    nrounds = 100, # nrounds: Number of trees, default: 100
+    max_depth = 6, # max_depth: Maximum tree depth, default: 6
+    eta = 0.3, # eta: Learning rate, default: 0.3
+    gamma = 0, # gamma: Used for tuning of Regularization, default: 0
+    colsample_bytree = 1, # colsample_bytree: Column sampling, default: 1
+    min_child_weight = 1, # min_child_weight: Minimum leaf weight, default: 1
+    subsample = 1 # subsample: Row sampling, default: 1
 )
 
 xgb_params <- list(
@@ -263,29 +263,31 @@ xgboost_mod <- xgb.cv(
 # multiClassSummary(xgboost_mod)
 
 OOF_prediction <- data.frame(xgboost_mod$pred) %>%
-  mutate(max_prob = inverse.transform(y_encoder, 
+    mutate(
+        max_prob = inverse.transform(
+            y_encoder,
             max.col(., ties.method = "last")
-            ),
-         label = inverse.transform(y_encoder,y_encoded + 1))
+        ),
+        label = inverse.transform(y_encoder, y_encoded + 1)
+    )
 
 head(OOF_prediction)
 ```
 
 
 ```{r}
-#confusion matrix
+# confusion matrix
 confusionMatrix(factor(OOF_prediction$max_prob),
-                factor(OOF_prediction$label),
-                mode = "everything")
-#Accuracy - 50% 
+    factor(OOF_prediction$label),
+    mode = "everything"
+)
+# Accuracy - 50%
 
-#view variable importance plot
+# view variable importance plot
 mat <- xgb.importance(model = xgboost_mod)
-xgb.plot.importance(importance_matrix = mat[1:20]) 
-
-
-
+xgb.plot.importance(importance_matrix = mat[1:20])
 ```
+
 ```{r}
 set.seed(3612)
 
