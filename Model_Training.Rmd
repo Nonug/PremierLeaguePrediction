@@ -20,12 +20,13 @@ p_load(
 
 ## Import dataset
 ```{r}
-train_df_timestamped <- read.csv("./data/training_data.csv")
+train_df_timestamped <- read.csv("./data/training_data_fwd.csv")
+
 train_df <- subset(train_df_timestamped,
     select = -c(Season, Date, Date_interval)
 )
 
-test_df <- read.csv("./data/testing_data.csv")
+test_df <- read.csv("./data/testing_data_fwd.csv")
 test_df <- subset(test_df, select = -c(Season, Date, Date_interval))
 ```
 
@@ -93,6 +94,23 @@ train_encoded <- data.frame(trainData_mat)
 # See the structure of the new dataset
 str(train_encoded)
 colnames(train_encoded)
+```
+
+```{r}
+# Converting a categorical variable to
+# as many binary variables as here are categories.
+dummies_model_test <- dummyVars(FTR ~ ., data = test_df)
+
+# Create the dummy variables using predict.
+# The Y variable (Purchase) will not be present in trainData_mat.
+testData_mat <- predict(dummies_model_test, newdata = test_df)
+
+# Convert to dataframe
+test_encoded <- data.frame(testData_mat)
+
+# See the structure of the new dataset
+str(test_encoded)
+colnames(test_encoded)
 ```
 
 
@@ -254,6 +272,12 @@ lattice_save(svmradial_plot, "Model Accuracies with SVM (radial kernel)")
 sink(file = "./outputs/confmat_svm.txt")
 confusionMatrix(reference = y, data = svmradial_pred, mode = "everything")
 sink(file = NULL)
+
+
+# svmradial_pred_test <- predict(svmradial, newdata = test_encoded)
+# sink(file = "./outputs/confmat_svm_fwdlook_test.txt")
+# confusionMatrix(reference = test_df$FTR, data = svmradial_pred_test, mode = "everything")
+# sink(file = NULL)
 ```
 Feature importance
 ```{r}
@@ -430,10 +454,10 @@ ggsave(xgb_imp_plot,
 
 ## Ensemble Model
 ```{r}
-algorithmList <- c("fv", "adaboost", "earth", "xgbDART", "svmRadial")
+algorithmList <- c("glm", "xgbDART", "svmRadial")
 
 set.seed(100)
-models <- caretList(Purchase ~ ., data = trainData, trControl = trainControl, methodList = algorithmList)
+models <- caretList(FTR ~ ., data = train_df, trControl = trainControl, methodList = algorithmList)
 results <- resamples(models)
 summary(results)
 ```
@@ -487,42 +511,45 @@ ggsave(res_plot,
 
 ```{r}
 compute.auc <- function(model, test.data) {
-    model.probs <- predict(model, test.data[, 1:34], type = "prob")
+    # model.probs <- predict(model, test.data[, 1:34], type = "prob")
+    # multinom_prob <- predict(multinom_CV, newdata = test_df, type = "prob")
+    model.probs <- predict(model, newdata = test.data, type = "prob")
 
-    model.roc <- roc(
-        predictor = test_df,
-        response = test.data$FTR,
-        levels = rev(levels(test.data$FTR))
+    model.roc <- multiclass.roc(
+        test.data$FTR,
+        model.probs,
+        plot = T
     )
 
-    model.roc.fp <- 1 - model.roc$specificities
-    model.roc.tp <- model.roc$sensitivities
-    model.roc.plot <- plot(
-        x = model.roc.fp, y = model.roc.tp, type = "l",
-        xlab = "false positive rate (1 - specificity)",
-        ylab = "true positive rate (sensitivity)",
-        main = "ROC Curve"
-    )
+    # model.roc.fp <- 1 - model.roc$specificities
+    # model.roc.tp <- model.roc$sensitivities
+    # model.roc.plot <- plot(
+    #     x = model.roc.fp, y = model.roc.tp, type = "l",
+    #     xlab = "false positive rate (1 - specificity)",
+    #     ylab = "true positive rate (sensitivity)",
+    #     main = "ROC Curve"
+    # )
 
-    model.auc <- model.roc$auc
+    # model.auc <- model.roc$auc
 
-    return(list(
-        probs = model.probs,
-        roc = model.roc.plot,
-        auc = model.auc
-    ))
+    return
 }
 ```
 
 ```{r}
-multinom.roc <- compute.auc(multinom_pred, test_df)
-ggsave(multinom.roc,
-    filename = "./img/multinom_test_res.png",
-    height = 6, width = 6
-)
+multinom.roc <- compute.auc(multinom_CV, test_df)
+
+multinom_prob <- predict(multinom_CV, newdata = test_df, type = "prob")
 
 model.roc <- multiclass.roc(
-    as.numeric(test_df$FTR),
-    as.numeric(multinom_pred)
+    test_df$FTR,
+    multinom_prob
 )
+
+x11(width = 10, height = 3)
+par(mfrow = c(1, 3))
+for (contrast in names(model.roc$rocs)) {
+    print(contrast)
+    plot(model.roc$rocs[[contrast]][[1]], col = "green", main = contrast)
+}
 ```
