@@ -443,7 +443,7 @@ res <- resamples(list(
     XgbLinear = xgboost_mod,
     xgbTree = xgbdart_mod
 ))
-sink(file = "models_traindata_results_resampled.txt")
+sink(file = "./outputs/models_traindata_results_resampled.txt")
 summary(res)
 sink(file = NULL)
 
@@ -465,5 +465,63 @@ SVM_pred <- predict(svmradial, test_df)
 XgbLinear_pred <- predict(xgboost_mod, test_df)
 xgbTree_pred <- predict(xgbdart_mod, test_df)
 
-confusionMatrix(reference = test_df$FTR, data = multinom_pred)
+# confusionMatrix(reference = test_df$FTR, data = multinom_pred)
+
+multinom_test_res <- cbind(
+    test_df$FTR,
+    predict(multinom_CV, newdata = test_df, type = "prob"), multinom_pred
+)
+colnames(multinom_test_res) <- c("truth", "D", "A", "H", "pred")
+# multiClassSummary(multinom_test_res, lev = levels(train_df$FTR), model = multinom_CV)
+metrics(multinom_test_res, truth, pred)
+
+res_plot <- plot(roc_auc(multinom_test_res, truth, D:H))
+ggsave(res_plot,
+    filename = "./img/multinom_test_res.png",
+    height = 6, width = 6
+)
+```
+
+
+```{r}
+compute.auc <- function(model, test.data) {
+    model.probs <- predict(model, test.data[, 1:34], type = "prob")
+
+    model.roc <- roc(
+        predictor = test_df,
+        response = test.data$FTR,
+        levels = rev(levels(test.data$FTR))
+    )
+
+    model.roc.fp <- 1 - model.roc$specificities
+    model.roc.tp <- model.roc$sensitivities
+    model.roc.plot <- plot(
+        x = model.roc.fp, y = model.roc.tp, type = "l",
+        xlab = "false positive rate (1 - specificity)",
+        ylab = "true positive rate (sensitivity)",
+        main = "ROC Curve"
+    )
+
+    model.auc <- model.roc$auc
+
+    return(list(
+        probs = model.probs,
+        roc = model.roc.plot,
+        auc = model.auc
+    ))
+}
+```
+
+```{r}
+multinom.roc <- compute.auc(multinom_pred, test_df)
+ggsave(multinom.roc,
+    filename = "./img/multinom_test_res.png",
+    height = 6, width = 6
+)
+
+model.roc <- roc(
+    predictor = test_df,
+    response = test.data$FTR,
+    levels = rev(levels(test.data$FTR))
+)
 ```
