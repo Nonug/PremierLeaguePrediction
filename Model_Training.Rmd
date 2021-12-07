@@ -176,10 +176,12 @@ multinom_CV <- train(
 
 multinom_CV
 fitted <- predict(multinom_CV)
-multinom_CV_plot <- plot(multinom_CV,
-    main = "Model Accuracies with caret + glmnet Multinom"
+multinom_CV_plot <- ggplot(multinom_CV) +
+    ggtitle("Model Accuracies with caret + glmnet Multinom")
+ggsave(multinom_CV_plot,
+    filename = "./img/Model Accuracies with caret + glmnet Multinom.png",
+    height = 6, width = 6
 )
-lattice_save(multinom_CV_plot, "Model Accuracies with caret + glmnet Multinom")
 
 sink(file = "./outputs/confmat_multinom.txt")
 confusionMatrix(reference = y, data = fitted, mode = "everything")
