@@ -13,7 +13,7 @@ p_load(
     "caret", "skimr", "RANN", "randomForest",
     "gbm", "xgboost", "caretEnsemble", "C50",
     DataExplorer, nnet, broom, glmnet, MLmetrics,
-    doParallel, dplyr, CatEncoders, yardstick, kernlab
+    doMC, dplyr, CatEncoders, yardstick, kernlab
 )
 ```
 
@@ -179,7 +179,10 @@ multinom_CV_plot <- plot(multinom_CV,
     main = "Model Accuracies with caret + glmnet Multinom"
 )
 lattice_save(multinom_CV_plot, "Model Accuracies with caret + glmnet Multinom")
+
+sink(file = "./outputs/confmat_multinom.txt")
 confusionMatrix(reference = y, data = fitted, mode = "everything")
+sink(file = NULL)
 ```
 
 ### Using nnet
@@ -241,10 +244,13 @@ svmradial <- train(
 svmradial
 svmradial_pred <- predict(svmradial)
 svmradial_plot <- plot(svmradial,
-    main = "Model Accuracies with caret + glmnet Multinom"
+    main = "Model Accuracies with SVM (radial kernel)"
 )
 lattice_save(svmradial_plot, "Model Accuracies with SVM (radial kernel)")
+
+sink(file = "./outputs/confmat_svm.txt")
 confusionMatrix(reference = y, data = svmradial_pred, mode = "everything")
+sink(file = NULL)
 ```
 Feature importance
 ```{r}
@@ -364,7 +370,10 @@ multinom_CV_plot <- plot(xgboost_mod,
     main = "Model Accuracies with caret + xgbLinear"
 )
 lattice_save(xgboost_mod, "Model Accuracies with xgbLinear")
+
+sink(file = "./outputs/confmat_xgblinear.txt")
 confusionMatrix(reference = y, data = fitted_xgb, mode = "everything")
+sink(file = NULL)
 
 # Feature importance
 xgb_imp <- varImp(xgboost_mod, scale = FALSE)
@@ -385,5 +394,7 @@ res <- resamples(list(
     XgbLinear = xgboost_mod
 ))
 res
+sink(file = "models_traindata_results_resampled.txt")
 summary(res)
+sink(file = NULL)
 ```
