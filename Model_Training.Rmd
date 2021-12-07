@@ -73,7 +73,8 @@ ggsave(ydist_plot,
 
 Create DataExplorer report 
 ```{r}
-create_report(x, output_file = "Xtrain_report.html")
+create_report(train_df, y = "FTR", output_file = "train_report.html")
+plot_bar(train_df)
 ```
 ### One-Hot Encoding
 ```{r}
