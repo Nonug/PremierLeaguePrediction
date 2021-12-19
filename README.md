@@ -1,4 +1,4 @@
-# STAT3612 Project - Predicting Premium League Winning Team
+# Predicting Premium League Winning Team
 
 Grigoras Vlad, Parnes Jesse, Poon Sze Sen, Chan Tsz Hei
 
